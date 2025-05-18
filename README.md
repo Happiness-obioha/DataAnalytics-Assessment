@@ -12,17 +12,25 @@ This repository contains my solutions to an SQL proficiency assessment involving
 - Used `CASE` + `COUNT(DISTINCT ...)` to count plan types.
 - Aggregated confirmed deposit inflows.
 - Filtered for customers who own **both** plan types.
-  
+
+ **Challenges:** 
+- Ensuring that savings transactions were linked to the correct plans using both owner_id and plan_id.
+- Cleaning null values from name fields using `CONCAT_WS()` for fallback.
+
+
+
 
 ## Question 2: Transaction Frequency Analysis
 
 **Objective:** Categorize customers by their average number of deposit transactions per month.
 
 **Approach:**
-- Calculated months of activity from first transaction to now.
-- Computed average transactions per month.
-- Classified users as **High**, **Medium**, or **Low Frequency** using a `CASE` statement.
-- Aggregated counts by category.
+- Calculated the number of active months per user using PERIOD_DIFF.
+- Calculated average transactions per month and categorized them using a CASE statement.
+- Grouped and averaged results by frequency category
+
+ **Challenges:**
+- PERIOD_DIFF() required CAST(... AS UNSIGNED) because it only accepts numeric YYYYMM format.
 
 
 
@@ -31,12 +39,14 @@ This repository contains my solutions to an SQL proficiency assessment involving
 **Objective:** Identify active savings or investment plans with **no inflow** in the last **365 days**.
 
 **Approach:**
-- Joined `plans_plan` with `savings_savingsaccount`.
-- Used `MAX(transaction_date)` to find last inflow.
-- Filtered plans with `DATEDIFF > 365` or no transactions at all using `LEFT JOIN`.
+- Used LEFT JOIN to include even plans with no transactions.
+- Grouped by plan and calculated the last transaction date using MAX().
+- Filtered using DATEDIFF() and HAVING.
 - Classified plan types as "Savings" or "Investment".
 
----
+ **Challenges:**
+- Ensured that both plans with zero transactions and stale transactions were flagged correctly
+
 
 ## Question 4: Customer Lifetime Value (CLV) Estimation
 
@@ -44,23 +54,20 @@ This repository contains my solutions to an SQL proficiency assessment involving
 
 **Formula:**
 
-\[
-CLV = \left( \frac{\text{Transactions}}{\text{Tenure in Months}} \right) \times 12 \times 0.1\% \text{ of average transaction}
-\]
+CLV=( Total Transactions/ Tenure)×12×0.1%×Average Transaction Value
 
 **Approach:**
-- Used `TIMESTAMPDIFF` to get tenure in months.
-- Counted deposit transactions.
-- Calculated average confirmed inflow per user.
-- Applied the formula and ordered by CLV descending.
+- TIMESTAMPDIFF(MONTH, u.date_joined, CURDATE()) → tenure in months
+- AVG(s.confirmed_amount) → average transaction value
+- Multiplied by 0.1% profit rate
+- GREATEST(..., 1) avoids divide-by-zero for very recent signups
+- Final CLV is rounded to 2 decimal places and expressed in Naira.
 
----
 
-## Challenges
+**Challenges:**
+ - Getting the tenure logic and averaging per user required multiple steps, and ensuring that kobo-to-naira conversion was consistently applied.
+  
 
-- Ensuring compatibility with **MySQL 8** functions like `PERIOD_DIFF`, `TIMESTAMPDIFF`, and CTEs.
-- Avoiding divide-by-zero by wrapping tenure in `GREATEST(..., 1)`.
-- Cleaning null values from name fields using `CONCAT_WS()` for fallback.
 
 
 
